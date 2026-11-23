@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#141618">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="在電腦或手機練習攝影。透過即時觀景窗體驗鏡頭、景深、曝光、色溫與手持防震。">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>FOCALAB 光圈實驗室｜攝影模擬器</title>
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./assets/icon-192.png">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="stylesheet" href="./style.css">
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="shell head-in">
+        <a class="brand" href="#sim" aria-label="FOCALAB 光圈實驗室首頁"><span class="brand-mark"><img src="./assets/mark.svg" alt=""></span><span
+            class="wordmark">FOCA<span>LAB</span></span><span class="brand-zh">光圈實驗室</span></a>
+        <nav class="nav" aria-label="主導覽">
+          <a href="#sim" data-nav="sim" class="nav-link active"><i data-i="camera"></i>模擬器</a>
+          <a href="#tasks" data-nav="tasks" class="nav-link"><i data-i="target"></i>拍攝任務</a>
+          <a href="#album" data-nav="album" class="nav-link"><i data-i="gallery"></i>我的相簿</a>
+        </nav>
+        <button class="help-btn" id="guideBtn"><i data-i="book"></i><span>操作指南</span></button>
+      </div>
+    </header>
+    <main class="shell">
+      <section id="sim-page" class="page">
+        <div class="page-intro">
+          <div>
+            <div class="eyebrow"><span></span>CAMERA SIMULATOR</div>
+            <h1>攝影模擬器</h1>
+            <p>轉動參數，透過觀景窗探索光影的變化。</p>
+          </div>
+          <div class="actions"><button id="scenesBtn" class="btn"><i data-i="layers"></i>切換場景<i data-i="chevron"
+                class="small-icon"></i></button><button id="uploadBtn" class="btn"><i data-i="upload"></i>上傳照片</button></div>
+        </div>
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <div id="missionRibbon" class="mission-ribbon" hidden></div>
+        <div class="workspace">
+          <div class="left-column">
+            <article class="panel viewer-panel" id="viewerPanel" aria-label="即時觀景窗">
+              <div class="panel-head viewer-head">
+                <div class="head-label"><span class="view-sign" data-i="focus"></span>
+                  <h2>即時觀景窗</h2><span class="live"><b></b>LIVE</span>
+                </div>
+                <div class="view-tools"><button id="gridBtn" class="icon-btn on" aria-label="切換三分構圖線" aria-pressed="true" title="三分構圖線 (G)"><i
+                      data-i="grid"></i></button><button id="fullBtn" class="icon-btn" aria-label="放大觀景窗" title="放大觀景窗"><i
+                      data-i="expand"></i></button></div>
+              </div>
+              <div id="stage" class="stage" tabindex="0" role="button" aria-label="相機觀景窗，點選畫面設定焦點">
+                <img id="stageFallback" src="./assets/taipei.webp" alt=""><canvas id="photoCanvas" aria-hidden="true"></canvas>
+                <div class="thirds" id="thirds" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+                <div class="hud-top"><span class="scene-tag"><i data-i="pin"></i><span id="sceneName">雨後台北</span></span><span
+                    class="hud-format">16:9</span></div>
+                <div id="reticle" class="reticle" aria-hidden="true"><b></b><b></b><b></b><b></b><span></span></div>
+                <div class="hud-bottom"><span class="hud-mode" id="hudMode">M</span><span id="hudLens">24 mm</span><b></b><span
+                    id="hudA">F4.0</span><b></b><span id="hudS">1/125</span><b></b><span id="hudI">ISO 400</span></div>
+                <div id="stageNote" class="stage-note" hidden></div>
+                <div class="flash" id="flash"></div>
+              </div>
+              <div class="meterbar">
+                <div class="meter-title"><i data-i="meter"></i>
+                  <div><strong>曝光指示</strong><label class="select-inline"><select aria-label="測光方式" id="metering">
+                        <option value="matrix">全區測光</option>
+                        <option value="center">中央重點</option>
+                        <option value="spot">點測光</option>
+                      </select><i data-i="chevron"></i></label></div>
+                </div>
+                <div class="ev-scale" role="img" id="evScale" aria-label="曝光指示">
+                  <div class="ticks" id="meterTicks"></div>
+                  <div class="meter-marker" id="meterMarker"></div>
+                  <div class="meter-numbers">
+                    <span>−3</span><span>−2</span><span>−1</span><span>0</span><span>+1</span><span>+2</span><span>+3</span></div>
+                </div>
+                <div class="ev-read"><strong id="evNum">0.0 EV</strong><span id="evStatus">曝光適中</span></div>
+              </div>
+            </article>
+            <article class="panel lens-panel">
+              <div class="panel-head">
+                <div class="head-label"><i class="accent" data-i="lens"></i>
+                  <h2>鏡頭與對焦</h2>
+                </div><span class="tiny-label">全片幅 36 × 24 mm</span>
+              </div>
+              <div class="lens-body">
+                <div class="row-label"><strong>鏡頭焦段</strong><span class="mono" id="fovValue"></span></div>
+                <div class="focal-list" id="focalList" role="group" aria-label="鏡頭焦段，單位毫米"></div>
+                <div class="row-label focus-label"><label for="focusRange"><strong>手動對焦環</strong></label><output class="amber mono"
+                    id="focusValue" for="focusRange">8.0 m</output></div>
+                <div class="rail lens-rail"><input type="range" min="0" max="100" step="0.1" id="focusRange" aria-label="對焦距離"></div>
+                <div class="range-ends"><span id="focusMin"></span><span>點選觀景窗也可對焦</span><span>∞</span></div>
+                <div class="dof-line"><i data-i="focus"></i><span>景深範圍</span><b class="mono" id="dofValue"></b></div>
+              </div>
+            </article>
+            <details class="panel subject-panel">
+              <summary><span><i data-i="wind" class="accent"></i>主體動態</span><i data-i="chevron"></i></summary>
+              <div class="subject-body">
+                <p>選擇動態主體的位置與速度，觀察慢快門留下的軌跡。</p>
+                <div class="subject-controls"><button id="markMotion" class="btn"><i data-i="cross"></i>標記移動主體</button><label>移動速度<select
+                      id="motionSpeed">
+                      <option value="0">靜止</option>
+                      <option value="0.45">緩慢</option>
+                      <option value="1">一般</option>
+                      <option value="2">快速</option>
+                    </select></label><label>移動方向<select id="motionDir">
+                      <option value="0">水平</option>
+                      <option value="45">斜向</option>
+                      <option value="90">垂直</option>
+                    </select></label></div>
+              </div>
+            </details>
+          </div>
+          <div class="right-column">
+            <aside class="panel controls-panel">
+              <div class="panel-head">
+                <div class="head-label"><i class="accent" data-i="tune"></i>
+                  <h2>相機控制</h2>
+                </div><button id="resetBtn" class="icon-btn" aria-label="重設相機參數" title="重設相機參數"><i data-i="reset"></i></button>
+              </div>
+              <div class="mode-block">
+                <div class="row-label"><strong>拍攝模式</strong><span id="modeName">手動曝光</span></div>
+                <div class="mode-picks" role="group" aria-label="拍攝模式"><button data-mode="P">P</button><button data-mode="S">S</button><button
+                    data-mode="A">A</button><button data-mode="M" class="sel">M</button></div>
+              </div>
+              <div class="control-tabs" role="tablist" aria-label="相機控制分類"><button data-tab="exposure" role="tab" class="chosen"><i
+                    data-i="exposure"></i>曝光</button><button data-tab="white" role="tab"><i data-i="sun"></i>白平衡</button><button
+                  data-tab="steady" role="tab"><i data-i="hand"></i>防手震</button></div>
+              <div class="tab-content" id="tabContent" role="tabpanel"></div>
+              <div class="shutter-wrap"><button id="shutterBtn" class="shutter" disabled><i
+                    data-i="aperture"></i><span>按下快門</span><kbd>Space</kbd></button></div>
+            </aside>
+            <article class="panel practice-panel">
+              <div class="panel-head">
+                <div class="head-label"><i class="accent" data-i="target"></i>
+                  <h2>拍攝任務</h2>
+                </div><span class="tiny-label mono" id="missionCount">0 / 6</span>
+              </div>
+              <div class="practice-body">
+                <div><strong id="missionTease"></strong>
+                  <p id="missionTeaseDesc"></p>
+                </div><button class="text-btn" id="missionLink">查看任務<i data-i="right"></i></button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section id="tasks-page" class="page" hidden>
+        <div class="page-intro">
+          <div>
+            <div class="eyebrow"><span></span>PHOTO MISSIONS</div>
+            <h1>拍攝任務</h1>
+            <p>選擇一個練習，在觀景窗裡完成挑戰並拍下成果。</p>
+          </div><span id="taskSummary" class="summary-chip"></span>
+        </div>
+        <div id="taskCards" class="task-cards"></div>
+      </section>
+      <section id="album-page" class="page" hidden>
+        <div class="page-intro">
+          <div>
+            <div class="eyebrow"><span></span>CONTACT SHEET</div>
+            <h1>我的相簿</h1>
+            <p>查看拍攝結果，對照每張照片的相機設定。</p>
+          </div><span id="albumCount" class="summary-chip"></span>
+        </div>
+        <div id="albumItems"></div>
+      </section>
+    </main>
+    <dialog id="modal" class="modal">
+      <div class="modal-head">
+        <h2 id="modalTitle"></h2><button id="closeModal" class="icon-btn" aria-label="關閉視窗"><i data-i="close"></i></button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
+    <noscript>請啟用 JavaScript 以操作攝影模擬器。</noscript>
+    <script type="module" src="./app.js"></script>
+  </body>
+
+</html>
