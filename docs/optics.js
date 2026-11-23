@@ -315,7 +315,7 @@ export function effectParams(s, crop, w, h, ev, seed = 1) {
   const safe = allowedTime(s);
   const sh = Math.max(0, Math.log2(s.shutter / safe)),
     shake = Math.min(.07, (Math.pow(2, Math.min(5, sh)) - 1) * .0018);
-  const subject = Math.min(.25, s.motionSpeed * s.shutter * s.focal / 35 * .57);
+  const subject = s.hasMotionSubject === false ? 0 : Math.min(.25, s.motionSpeed * s.shutter * s.focal / 35 * .57);
   const a = s.motionDir * Math.PI / 180;
   const inv = Number.isFinite(s.focus) ? 1 / s.focus : 0;
   return {

@@ -13,7 +13,7 @@
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="./assets/icon-192.png">
     <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css?v=mask3">
   </head>
 
   <body>
@@ -49,12 +49,15 @@
                 <div class="head-label"><span class="view-sign" data-i="focus"></span>
                   <h2>即時觀景窗</h2><span class="live"><b></b>LIVE</span>
                 </div>
-                <div class="view-tools"><button id="gridBtn" class="icon-btn on" aria-label="切換三分構圖線" aria-pressed="true" title="三分構圖線 (G)"><i
+                <div class="view-tools">
+                  <button id="viewMotion" class="icon-btn" aria-label="編輯主體範圍" title="編輯主體範圍"><i data-i="mask-box"></i></button>
+                  <button id="gridBtn" class="icon-btn on" aria-label="切換三分構圖線" aria-pressed="true" title="三分構圖線 (G)"><i
                       data-i="grid"></i></button><button id="fullBtn" class="icon-btn" aria-label="放大觀景窗" title="放大觀景窗"><i
                       data-i="expand"></i></button></div>
               </div>
               <div id="stage" class="stage" tabindex="0" role="button" aria-label="相機觀景窗，點選畫面設定焦點">
                 <img id="stageFallback" src="./assets/taipei.webp" alt=""><canvas id="photoCanvas" aria-hidden="true"></canvas>
+                <canvas id="motionOverlay" aria-hidden="true" hidden></canvas>
                 <div class="thirds" id="thirds" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
                 <div class="hud-top"><span class="scene-tag"><i data-i="pin"></i><span id="sceneName">雨後台北</span></span><span
                     class="hud-format">16:9</span></div>
@@ -100,8 +103,16 @@
             <details class="panel subject-panel">
               <summary><span><i data-i="wind" class="accent"></i>主體動態</span><i data-i="chevron"></i></summary>
               <div class="subject-body">
-                <p>選擇動態主體的位置與速度，觀察慢快門留下的軌跡。</p>
-                <div class="subject-controls"><button id="markMotion" class="btn"><i data-i="cross"></i>標記移動主體</button><label>移動速度<select
+                <p>框選或塗抹會移動的部分，再調整速度與方向，觀察慢快門的拖影。</p>
+                <div class="subject-selection">
+                  <span class="mask-status" id="motionStatus" role="status">場景預設範圍</span>
+                  <label class="mask-visibility"><input type="checkbox" id="showMotion">顯示範圍</label>
+                </div>
+                <div class="subject-controls mask-actions">
+                  <button id="markMotion" class="btn"><i data-i="mask-box"></i>編輯主體範圍</button>
+                  <button id="removeMotion" class="btn"><i data-i="trash"></i>移除標記</button>
+                </div>
+                <div class="subject-controls"><label>移動速度<select
                       id="motionSpeed">
                       <option value="0">靜止</option>
                       <option value="0.45">緩慢</option>
@@ -170,6 +181,39 @@
         <div id="albumItems"></div>
       </section>
     </main>
+    <template id="motionEditorTemplate">
+      <section class="motion-editor">
+        <div class="mask-toolbar" role="group" aria-label="範圍編輯工具">
+          <button data-mask-tool="point"><i data-i="cross"></i>點選</button>
+          <button data-mask-tool="rect" aria-pressed="true"><i data-i="mask-box"></i>框選</button>
+          <button data-mask-tool="brush"><i data-i="brush"></i>塗抹</button>
+          <button data-mask-tool="erase"><i data-i="eraser"></i>橡皮擦</button>
+        </div>
+        <div class="mask-size" id="maskSizeRow" hidden>
+          <label for="maskSize">筆刷直徑</label>
+          <div class="rail"><input id="maskSize" type="range" min="4" max="120" step="2" value="30"></div>
+          <output id="maskSizeValue" for="maskSize">30 px</output>
+        </div>
+        <div class="mask-viewbar">
+          <span class="mask-legend"><i></i>動態範圍</span>
+          <div class="mask-views" role="group" aria-label="編輯視野">
+            <button data-mask-view="crop">目前取景</button><button data-mask-view="full">整張照片</button>
+          </div>
+        </div>
+        <div class="mask-frame">
+          <canvas class="mask-surface" tabindex="0" role="group" aria-describedby="maskHint maskKeys"></canvas>
+        </div>
+        <p id="maskHint" aria-live="polite"></p>
+        <p id="maskKeys" class="sr-only">方向鍵移動游標，Enter 開始或結束框選與塗抹，Escape 取消目前筆畫。</p>
+        <div class="mask-history">
+          <button id="maskUndo" class="text-btn"><i data-i="undo"></i>復原上一步</button>
+          <button id="maskClear" class="text-btn"><i data-i="trash"></i>清空範圍</button>
+          <button id="maskPreset" class="text-btn">還原場景預設</button>
+        </div>
+        <div class="mask-footer"><button id="maskCancel" class="btn">取消</button>
+          <button id="maskApply" class="btn primary"><i data-i="check"></i>套用範圍</button></div>
+      </section>
+    </template>
     <dialog id="modal" class="modal">
       <div class="modal-head">
         <h2 id="modalTitle"></h2><button id="closeModal" class="icon-btn" aria-label="關閉視窗"><i data-i="close"></i></button>
@@ -178,7 +222,7 @@
     </dialog>
     <div id="toast" role="status" aria-live="polite" class="toast" hidden></div>
     <noscript>請啟用 JavaScript 以操作攝影模擬器。</noscript>
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./app.js?v=mask3"></script>
   </body>
 
 </html>

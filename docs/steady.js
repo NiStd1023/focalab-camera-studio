@@ -1,9 +1,9 @@
 import {
   icon
-} from './icons.js';
+} from './icons.js?v=mask3';
 import {
   clamp
-} from './optics.js';
+} from './optics.js?v=mask3';
 export function stabilityTest(body, onResult) {
   let frame = null,
     active = false,

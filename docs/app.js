@@ -1,7 +1,9 @@
+import { startMotionEditor } from './motion-editor.js?v=mask3';
+import { compileSelection, defaultMask, drawCrop, emptySelection } from './motion-mask.js?v=mask3';
 import {
   icon,
   hydrateIcons
-} from './icons.js';
+} from './icons.js?v=mask3';
 import {
   focalLengths,
   apertures,
@@ -28,23 +30,23 @@ import {
   depthMap,
   sampleMap,
   effectParams
-} from './optics.js';
+} from './optics.js?v=mask3';
 import {
   CameraRenderer
-} from './renderer.js';
+} from './renderer.js?v=mask3';
 import {
   missions,
   safeJSON,
   keep,
   openStore,
   dbOp
-} from './learning.js';
+} from './learning.js?v=mask3';
 import {
   stabilityTest
-} from './steady.js';
+} from './steady.js?v=mask3';
 import {
   readExif
-} from './exif.js';
+} from './exif.js?v=mask3';
 
 const $ = id => document.getElementById(id);
 const escapeText = v => String(v).replace(/[&<>"']/g, c => ({
@@ -85,7 +87,7 @@ const s = {
   meterEV: 0,
   sceneId: 'taipei',
   tab: 'exposure',
-  motionAnchor: null,
+  hasMotionSubject: true,
   marks: [],
   seed: 2.13
 };
@@ -183,6 +185,7 @@ function drawPhoto() {
   const p = effectParams(s, crop, current.img.width, current.img.height, exposure(current.ev, s), s.seed);
   const width = $('stage').clientWidth * (window.devicePixelRatio || 1);
   renderer.draw(p, width || 1120, adjusting && !shooting);
+  drawMotionOverlay();
 }
 renderer.onRecover = schedule;
 
@@ -262,6 +265,11 @@ function updateInterface() {
   $('gridBtn').setAttribute('aria-pressed', s.grid);
   $('gridBtn').classList.toggle('on', s.grid);
   $('motionSpeed').value = String(s.motionSpeed);
+  const status = !s.hasMotionSubject ? '尚未標記主體' : current.motionSelection ? '自訂主體範圍' : '場景預設範圍';
+  if ($('motionStatus').textContent !== status) $('motionStatus').textContent = status;
+  $('removeMotion').disabled = !s.hasMotionSubject || sceneBusy;
+  $('showMotion').disabled = !s.hasMotionSubject;
+  $('viewMotion').disabled = $('markMotion').disabled = sceneBusy;
   $('motionDir').value = String(s.motionDir);
   if ($('depthTools')) $('depthTools').hidden = s.sceneId !== 'upload';
   $('shutterBtn').disabled = sceneBusy || shooting;
@@ -450,12 +458,10 @@ function setupFixed() {
     s.motionDir = +e.target.value;
     schedule();
   };
-  $('markMotion').onclick = () => {
-    setTool(toolMode === 'motion' ? '' : 'motion');
-    if (toolMode) $('stage').scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
-    });
+  $('markMotion').onclick = $('viewMotion').onclick = editMotion;
+  $('showMotion').onchange = drawMotionOverlay;
+  $('removeMotion').onclick = () => {
+    if (current && !sceneBusy) changeMotionSelection(emptySelection(), null);
   };
   const depthTools = document.createElement('div');
   depthTools.id = 'depthTools';
@@ -563,8 +569,7 @@ function setTool(value) {
   toolMode = value;
   const t = $('stageNote');
   t.hidden = !value;
-  t.textContent = value === 'motion' ? '點選要移動的主體' : value === 'depth' ? '點選照片中的 ' + depthChoice + ' m 區域' : '';
-  $('markMotion').classList.toggle('primary', value === 'motion');
+  t.textContent = value === 'depth' ? '點選照片中的 ' + depthChoice + ' m 區域' : '';
   $('markDepth')?.classList.toggle('primary', value === 'depth');
 }
 
@@ -572,18 +577,7 @@ function stageAction(x, y) {
   if (!crop || !current || sceneBusy) return;
   const u = crop.x + clamp(x, 0, 1) * crop.w,
     v = crop.y + clamp(y, 0, 1) * crop.h;
-  if (toolMode === 'motion') {
-    s.motionAnchor = {
-      x: u,
-      y: v,
-      rx: crop.w * .15,
-      ry: crop.h * .19
-    };
-    if (s.motionSpeed === 0) s.motionSpeed = 1;
-    updateMap();
-    setTool('');
-    toast('已標記移動主體');
-  } else if (toolMode === 'depth') {
+  if (toolMode === 'depth') {
     s.marks.push({
       x: u,
       y: v,
@@ -628,8 +622,77 @@ function locateFocusPlane() {
 }
 
 function updateMap() {
-  current.map = depthMap(current.img.width, current.img.height, s.sceneId, s.motionAnchor, s.marks);
+  current.map = depthMap(current.img.width, current.img.height, s.sceneId, null, s.marks);
   renderer.setMap(current.map);
+}
+
+function drawMotionOverlay() {
+  const overlay = $('motionOverlay');
+  const source = current?.motionSelection ? renderer.subjectMask?.canvas : current?.motionPreset;
+  overlay.hidden = !$('showMotion').checked || !s.hasMotionSubject || !source || !crop;
+  if (overlay.hidden) return;
+  const width = renderer.canvas.width, height = renderer.canvas.height;
+  if (overlay.width !== width || overlay.height !== height) {
+    overlay.width = width;
+    overlay.height = height;
+  }
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, width, height);
+  drawCrop(ctx, source, crop, width, height);
+}
+
+function editMotion() {
+  if (!current || !crop || sceneBusy) return;
+  setTool('');
+  showDialog('編輯主體範圍');
+  $('modal').classList.add('motion-dialog');
+  const body = $('modalBody');
+  body.replaceChildren($('motionEditorTemplate').content.cloneNode(true));
+  hydrateIcons(body);
+  const cleanup = startMotionEditor(body.querySelector('.motion-editor'), {
+    photo: current.img, preset: current.motionPreset, initial: current.motionSelection, crop,
+    apply: changeMotionSelection, close: closeDialog
+  });
+  modalCleanup = () => {
+    cleanup();
+    $('modal').classList.remove('motion-dialog');
+  };
+}
+
+function changeMotionSelection(selection, compiled) {
+  const scene = current;
+  scene.motionSelection = selection;
+  s.hasMotionSubject = selection === null || !!compiled;
+  renderer.setMotionMask(compiled);
+  const resume = !!compiled && s.motionSpeed === 0;
+  if (resume) s.motionSpeed = 1;
+  schedule();
+  if (resume) toast('已套用範圍，移動速度已設為一般。');
+  else if (!s.hasMotionSubject) toast('已移除主體標記與主體拖影。');
+  else toast(selection ? '已套用自訂主體範圍。' : '已還原場景預設範圍。');
+  if (scene.id === 'upload' && uploadRecord) uploadRecord.meta.motionSelection = selection;
+  saveMotionSelection(scene, selection).catch(() => {
+    if (current === scene && scene.motionSelection === selection) toast('範圍已套用，目前僅保留於本次使用。');
+  });
+}
+
+async function saveMotionSelection(scene, selection) {
+  const db = await dbReady;
+  if (scene.id !== 'upload') {
+    const key = 'motion:' + scene.id;
+    return dbOp(db, 'current', 'readwrite', store => selection === null ? store.delete(key) : store.put(selection, key));
+  }
+  // Editing in an older tab must never overwrite a newer uploaded photo.
+  return dbOp(db, 'current', 'readwrite', store => {
+    const request = store.get('upload');
+    request.onsuccess = () => {
+      const saved = request.result;
+      if (!saved || saved.meta.photoId !== scene.photoId) return;
+      saved.meta.motionSelection = selection;
+      store.put(saved, 'upload');
+    };
+    return request;
+  });
 }
 
 function loadImage(src) {
@@ -677,6 +740,7 @@ function sceneTemplate(id, img, meta, stats = imageStats(img)) {
     img,
     stats,
     baseLum: measure(stats, c, 'matrix', meta.point),
+    motionSelection: meta.motionSelection ?? null,
     map: null
   };
 }
@@ -697,7 +761,6 @@ function applyDefaults(scene) {
     metering: 'matrix',
     isOn: false,
     stops: 3,
-    motionAnchor: null,
     motionSpeed: scene.motion,
     motionDir: 0,
     marks: []
@@ -712,6 +775,10 @@ function assignScene(item) {
   applyDefaults(item);
   current.map = depthMap(item.img.width, item.img.height, item.id, null, []);
   renderer.setScene(item.img, current.map);
+  item.motionPreset = defaultMask(current.map);
+  const compiled = compileSelection(item.img, item.motionSelection, item.motionPreset);
+  s.hasMotionSubject = item.motionSelection === null || !!compiled;
+  renderer.setMotionMask(compiled);
   const fallback = $('stageFallback');
   fallback.src = item.id === 'upload' ? uploadPreviewURL : scenes[item.id].src;
   sceneBusy = false;
@@ -738,7 +805,11 @@ async function changeScene(id) {
           ...meta,
           kSource: '場景預設光源'
         });
+        try {
+          item.motionSelection = await dbOp(await dbReady, 'current', 'readonly', store => store.get('motion:' + id)) ?? null;
+        } catch { /* The preset also works without local storage. */ }
       }
+      if (loadingSerial !== serial) return;
       sceneCache.set(id, item);
     }
     if (loadingSerial !== serial) return;
@@ -765,6 +836,7 @@ async function importFile(file) {
     const m = {
       name: file.name.replace(/\.[^.]+$/, '').slice(0, 60) || '自訂照片',
       detail: '自訂場景・本機照片',
+      photoId: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now() + '-' + Math.random(),
       ev,
       k: k || 5500,
       kSource: meta.k ? 'EXIF 光源類型估算' : '照片色彩估算',
@@ -851,7 +923,7 @@ function chooseScene() {
 
 function guide() {
   showDialog('操作指南',
-    '<div class="guide-list"><section><h3>先拍一張，再改一個參數</h3><p>在「雨後台北」點選計程車對焦，按下快門。把焦段切換為 85 mm，再拍一張，到「我的相簿」比較兩張照片。換焦段時會盡量保持主體在畫面中的位置，放大後可拖曳重新構圖。</p></section><section><h3>認識 P、S、A、M</h3><p>P 自動搭配光圈與快門，S 由你決定快門，A 由你決定光圈，M 兩者皆可自行設定。四個模式都能調整 ISO。在自動模式，曝光補償可以調整亮暗目標。</p></section><section><h3>拍出景深、動態與雜訊</h3><p>用 A 模式比較 f/2 與 f/16 的清晰範圍。用 S 模式比較快慢快門，再提高 ISO 觀察暗部顆粒。點測光取樣於對焦點，全區測光取樣於目前取景範圍。</p></section><section><h3>上傳照片與白平衡</h3><p>匯入後會優先依 EXIF 光源類型估算 K 值，其次才以照片色彩估算。光源與相機 K 值相同時顯示參考色調。單張照片的深度、動態及光源皆為教學近似，可在「鏡頭與對焦」標記深度，或在「主體動態」指定移動位置。長焦取景會裁切原圖。</p></section><section><h3>測試手持穩定度</h3><p>在「防手震」做 6 秒測驗。安全快門以全片幅焦段倒數為基準，加入個人等級與防震級數。防手震會減輕相機晃動，移動主體的拖影仍取決於快門速度。</p></section><section><h3>安裝與離線使用</h3><p id="offlineStatus"></p><p>Android 或電腦可從瀏覽器選單安裝，iPhone 可從 Safari 的分享選單選「加入主畫面」。上傳照片、相簿與任務進度都保存在目前瀏覽器。</p><div id="installSlot"></div></section><section><h3>鍵盤快捷鍵</h3><p>Space 拍攝，G 切換三分線，Esc 關閉放大觀景窗。選到滑桿時，方向鍵可逐格微調。</p></section></div>'
+    '<div class="guide-list"><section><h3>先拍一張，再改一個參數</h3><p>在「雨後台北」點選計程車對焦，按下快門。把焦段切換為 85 mm，再拍一張，到「我的相簿」比較兩張照片。換焦段時會盡量保持主體在畫面中的位置，放大後可拖曳重新構圖。</p></section><section><h3>認識 P、S、A、M</h3><p>P 自動搭配光圈與快門，S 由你決定快門，A 由你決定光圈，M 兩者皆可自行設定。四個模式都能調整 ISO。在自動模式，曝光補償可以調整亮暗目標。</p></section><section><h3>拍出景深、動態與雜訊</h3><p>用 A 模式比較 f/2 與 f/16 的清晰範圍。用 S 模式比較快慢快門，再提高 ISO 觀察暗部顆粒。點測光取樣於對焦點，全區測光取樣於目前取景範圍。</p></section><section><h3>上傳照片與白平衡</h3><p>匯入後會優先依 EXIF 光源類型估算 K 值，其次才以照片色彩估算。光源與相機 K 值相同時顯示參考色調。單張照片的深度、動態及光源皆為教學近似，可在「鏡頭與對焦」標記深度，或從觀景窗的虛線方框開啟「編輯主體範圍」。可用框選圈出大小，以筆刷補畫、橡皮擦修邊，再按「套用範圍」。在「主體動態」按「移除標記」，即可清除主體拖影。長焦取景會裁切原圖。</p></section><section><h3>測試手持穩定度</h3><p>在「防手震」做 6 秒測驗。安全快門以全片幅焦段倒數為基準，加入個人等級與防震級數。防手震會減輕相機晃動，移動主體的拖影仍取決於快門速度。</p></section><section><h3>安裝與離線使用</h3><p id="offlineStatus"></p><p>Android 或電腦可從瀏覽器選單安裝，iPhone 可從 Safari 的分享選單選「加入主畫面」。上傳照片、相簿與任務進度都保存在目前瀏覽器。</p><div id="installSlot"></div></section><section><h3>鍵盤快捷鍵</h3><p>Space 拍攝，G 切換三分線，Esc 關閉放大觀景窗。選到滑桿時，方向鍵可逐格微調。</p></section></div>'
     );
   refreshInstall();
 }
@@ -966,7 +1038,7 @@ function shotMeta() {
     stabilization: s.isOn ? s.stops : 0,
     safe: safeDisplay(s),
     steady: s.grade,
-    motion: s.motionSpeed
+    motion: s.hasMotionSubject ? s.motionSpeed : 0
   };
 }
 async function takeShot() {

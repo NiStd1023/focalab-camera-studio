@@ -1,10 +1,12 @@
-const CACHE = 'focalab-shell-20261123-v5';
+const CACHE = 'focalab-shell-subject-ranges-v3';
 const root = new URL('./', self.registration.scope);
-const paths = ['', 'index.html', 'style.css', 'app.js', 'icons.js', 'optics.js', 'renderer.js', 'learning.js', 'steady.js', 'exif.js',
+const paths = ['', 'index.html', 'style.css', 'app.js', 'icons.js', 'optics.js', 'renderer.js', 'motion-mask.js', 'motion-editor.js', 'learning.js', 'steady.js', 'exif.js',
   'manifest.webmanifest', 'assets/mark.svg', 'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/mask-512.png',
   'assets/taipei.webp', 'assets/tea.webp', 'assets/tc-regular.woff2', 'assets/tc-bold.woff2'
 ];
-const known = new Set(paths.map(path => new URL(path, root).href));
+// Versioned module URLs also work on the first visit from the previous offline shell.
+const assetURL = path => new URL(/\.(js|css|woff2)$/.test(path) ? path + '?v=mask3' : path, root).href;
+const known = new Set(paths.map(assetURL));
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const cache = await caches.open(CACHE);

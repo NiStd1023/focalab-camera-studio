@@ -2217,14 +2217,14 @@ select:not(.select-inline select) {
 
 @font-face {
   font-family: "Noto Lab";
-  src: url("./assets/tc-regular.woff2") format("woff2");
+  src: url("./assets/tc-regular.woff2?v=mask3") format("woff2");
   font-weight: 100 549;
   font-display: swap
 }
 
 @font-face {
   font-family: "Noto Lab";
-  src: url("./assets/tc-bold.woff2") format("woff2");
+  src: url("./assets/tc-bold.woff2?v=mask3") format("woff2");
   font-weight: 550 900;
   font-display: swap
 }
@@ -2285,4 +2285,55 @@ select:not(.select-inline select) {
 
 .live {
   font-size: 12px
+}
+
+.subject-selection, .mask-visibility, .mask-size, .mask-viewbar, .mask-legend,
+.mask-views, .mask-history, .mask-footer { display: flex; align-items: center; }
+.subject-selection, .mask-viewbar { justify-content: space-between; gap: 8px; }
+.subject-selection { margin-top: 14px; }
+.mask-status { color: var(--gold); font-size: 14px; }
+.mask-visibility { gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.mask-visibility input { width: 16px; height: 16px; accent-color: var(--gold); }
+.mask-actions { margin-block: 10px 14px; }
+.mask-actions button:disabled, .mask-history button:disabled, .mask-footer button:disabled { opacity: .4; }
+#motionOverlay { z-index: 2; object-fit: fill; opacity: .48; }
+.modal.motion-dialog { width: min(760px, calc(100% - 28px)); max-height: 94dvh; }
+.mask-toolbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mask-toolbar button, .mask-views button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 38px; border: 1px solid var(--line); background: var(--surface);
+  border-radius: 6px; font-size: 14px; font-weight: 600; color: var(--muted);
+}
+.mask-toolbar button[aria-pressed="true"] { background: var(--gold); color: #211d14; border-color: var(--gold); }
+.mask-toolbar .ico { width: 17px; height: 17px; }
+.mask-size { gap: 12px; margin-top: 11px; font-size: 14px; }
+.mask-size .rail { flex: 1; margin: 0; }
+.mask-size output { color: var(--gold); min-width: 56px; text-align: right; font: 14px var(--mono); }
+.mask-viewbar { margin: 13px 0 7px; }
+.mask-legend { gap: 7px; font-size: 13px; color: #c3d7d2; }
+.mask-legend i { width: 10px; height: 10px; border-radius: 3px; background: #38dacc; }
+.mask-views { gap: 2px; border-radius: 5px; background: #17191b; padding: 2px; }
+.mask-views button { min-height: 30px; border: 0; background: transparent; padding: 3px 9px; font-size: 13px; }
+.mask-views button[aria-pressed="true"] { background: #373a3c; color: var(--text); }
+.mask-frame {
+  display: grid; place-items: center; width: 100%; height: clamp(150px, 43dvh, 405px);
+  background: #101213; overflow: hidden; border-radius: 6px;
+}
+.mask-surface { display: block; width: 1px; height: 1px; touch-action: none; cursor: crosshair; user-select: none; }
+.mask-surface:focus-visible { outline-offset: -3px; }
+@media (hover: hover) { .mask-surface.round-tool { cursor: none; } }
+#maskHint { min-height: 22px; margin: 8px 0; font-size: 14px; color: var(--muted); }
+.mask-history { flex-wrap: wrap; gap: 6px 16px; }
+.mask-history button { min-height: 36px; font-size: 13px; }
+.mask-history button:last-child { margin-left: auto; color: var(--muted); }
+.mask-footer { justify-content: flex-end; gap: 8px; margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 560px) {
+  .modal.motion-dialog { width: calc(100% - 16px); }
+  .motion-dialog .modal-body { padding: 12px; }
+  .mask-toolbar { gap: 4px; }
+  .mask-toolbar button { gap: 4px; min-height: 42px; }
+  .mask-frame { height: clamp(150px, 32dvh, 295px); }
+  .mask-history { gap: 3px 9px; }
+  .mask-footer .btn { min-height: 41px; }
 }

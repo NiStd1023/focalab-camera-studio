@@ -2,7 +2,7 @@ import {
   exposure,
   allowedTime,
   dof
-} from './optics.js';
+} from './optics.js?v=mask3';
 const balanced = s => Math.abs(s.meterEV) <= .5;
 export const missions = [{
     id: 'meter',
@@ -37,7 +37,7 @@ export const missions = [{
     desc: '選擇高速快門，把移動中的主體定格在畫面裡。',
     tip: '可使用 S 模式，快門設為 1/500 秒或更快。若畫面偏暗，提高 ISO。',
     rules: [
-      ['啟用場景主體動態', s => s.motionSpeed > 0],
+      ['啟用場景主體動態', s => s.hasMotionSubject !== false && s.motionSpeed > 0],
       ['快門達 1/500 s 或更快', s => s.shutter <= 1 / 500],
       ['測光讀值在 ±0.5 EV 內', balanced]
     ]
@@ -50,7 +50,7 @@ export const missions = [{
     desc: '放慢快門，讓移動主體留下拖影，同時穩住街景。',
     tip: '用 35 mm、S 模式與低 ISO 試試 1/8 秒。打開防手震以穩定背景。',
     rules: [
-      ['移動速度為一般或快速', s => s.motionSpeed >= 1],
+      ['移動速度為一般或快速', s => s.hasMotionSubject !== false && s.motionSpeed >= 1],
       ['快門 1/15 s 或更慢', s => s.shutter >= 1 / 15],
       ['符合個人安全快門，曝光在 ±0.5 EV 內', s => s.shutter <= allowedTime(s) && balanced(s)]
     ]

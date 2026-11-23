@@ -1,11 +1,13 @@
+import { sampleAlpha } from './motion-mask.js?v=mask3';
 import {
   clamp
-} from './optics.js';
+} from './optics.js?v=mask3';
 const vertex = 'attribute vec2 pos;varying vec2 uv;void main(){uv=vec2(pos.x*.5+.5,.5-pos.y*.5);gl_Position=vec4(pos,0.,1.);}';
 const fragment = `
 precision highp float;
 varying vec2 uv;
-uniform sampler2D base,smallA,smallB,smallC,depth;
+uniform sampler2D base,smallA,smallB,smallC,depth,subject;
+uniform bool customSubject;
 uniform vec4 crop;
 uniform vec2 movement,shake;
 uniform vec3 gain;
@@ -26,7 +28,8 @@ void main(){
  float di=(m.r*65280.+m.g*255.)*(4./65535.);
  float radius=abs(di-inv)*blur;
  vec3 color=photo(p,radius);
- vec2 dist=movement*m.b+shake;
+ float subjectAmount=customSubject ? texture2D(subject,p).a : m.b;
+ vec2 dist=movement*subjectAmount+shake;
  if(dot(dist,dist)>.00000001){
   vec3 total=vec3(0.);float weights=0.;
   for(int i=0;i<15;i++){
@@ -128,7 +131,7 @@ export class CameraRenderer {
       gl.enableVertexAttribArray(pos);
       gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
       this.u = {};
-      for (const key of ['base', 'smallA', 'smallB', 'smallC', 'depth', 'crop', 'movement', 'shake', 'gain', 'inv', 'blur', 'light', 'noise',
+      for (const key of ['customSubject', 'subject', 'base', 'smallA', 'smallB', 'smallC', 'depth', 'crop', 'movement', 'shake', 'gain', 'inv', 'blur', 'light', 'noise',
           'seed'
         ]) this.u[key] = gl.getUniformLocation(p, key);
       ['base', 'smallA', 'smallB', 'smallC', 'depth'].forEach((n, i) => gl.uniform1i(this.u[n], i));
@@ -158,9 +161,17 @@ export class CameraRenderer {
     this.map = map;
     this.levels = [levelCanvas(img, 1), levelCanvas(img, 4), levelCanvas(img, 15), levelCanvas(img, 52)];
     if (this.gl) {
+      this.setMotionMask(null);
       this.levels.forEach((l, i) => this.texture(i, l));
       this.texture(4, map.canvas);
     } else this.prepareCPU();
+  }
+  setMotionMask(mask) {
+    this.subjectMask = mask;
+    if (!this.gl) return;
+    if (mask) this.texture(5, mask.canvas);
+    this.gl.uniform1i(this.u.subject, mask ? 5 : 4);
+    this.gl.uniform1i(this.u.customSubject, mask ? 1 : 0);
   }
   setMap(map) {
     this.map = map;
@@ -229,10 +240,11 @@ export class CameraRenderer {
         const r = Math.abs(map.inv[idx] - p.inv) * p.blur,
           l = r < 3 ? 0 : r < 12 ? 1 : 2,
           blend = clamp(l === 0 ? (r - .35) / 2.65 : l === 1 ? (r - 3) / 9 : (r - 12) / 28, 0, 1);
+        const amount = this.subjectMask ? sampleAlpha(this.subjectMask, u, v) : map.mask[idx];
         const a = levels[l],
           b = levels[l + 1],
-          dx = p.motion[0] * map.mask[idx] + p.shake[0],
-          dy = p.motion[1] * map.mask[idx] + p.shake[1],
+          dx = p.motion[0] * amount + p.shake[0],
+          dy = p.motion[1] * amount + p.shake[1],
           travel = Math.abs(dx) * levels[0].w + Math.abs(dy) * levels[0].h,
           n = travel < .8 ? 1 : travel < 8 ? 5 : travel < 32 ? 9 : 17,
           kernel = motionKernels.get(n);

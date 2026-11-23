@@ -1,5 +1,9 @@
 /* Local line icons for the camera controls. */
 const drawings = {
+  'mask-box': '<path d="M4 8V4h4m3 0h2m3 0h4v4m0 3v2m0 3v4h-4m-3 0h-2m-3 0H4v-4m0-3v-2"/>',
+  brush: '<path d="m13.4 12.8 6.4-8a1.7 1.7 0 0 0-2.5-2.2l-7 7.4 3.1 2.8Z"/><path d="M12.5 14.5c.7 3.4-2.6 5.6-8.3 5.1 1.6-1 1.9-1.9 2.1-3.6.3-2.3 2.9-4.3 5.2-2.6z"/>',
+  eraser: '<path d="m3.5 13.8 8.9-9a2 2 0 0 1 2.8 0l4.5 4.6a2 2 0 0 1 0 2.8l-7.6 7.6H8.7l-5.2-5a.7.7 0 0 1 0-1zM8.8 8.6l7.3 7.3M12 20h9"/>',
+  undo: '<path d="M8 4 3 9l5 5M3 9h10c4.5 0 7 2 7 5.7 0 3.2-2.6 5.3-6 5.3"/>',
   aperture: '<circle cx="12" cy="12" r="9.5"/><path d="m14.3 8 5.5 9.5M9.7 8h10.9m-13.2 4 5.5-9.5M9.7 16 4.2 6.5m10.1 9.5h-11m13.3-4-5.5 9.5"/>',
   camera: '<path d="M3 7.5h4l1.5-2.7h7L17 7.5h4v12H3z"/><circle cx="12" cy="13" r="3.4"/>',
   target: '<circle cx="12" cy="12" r="8.7"/><circle cx="12" cy="12" r="5.1"/><circle cx="12" cy="12" r="1.2"/>',
